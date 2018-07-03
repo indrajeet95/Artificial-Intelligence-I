@@ -1,4 +1,3 @@
-#!/usr/bin/python
 #USAGE: python q4.py 18 
 #where 18 is passed as an argument to represent number of iterations
 import sys

@@ -1,90 +1,78 @@
-#! /usr/bin/env python
+#MISSIONARIES AND CANNIBALS PROBLEM
+# The state representation (num_c,num_m,pos_b) signifies the number of cannibals, missionaries and boat on the left side of the river
+#The start state will be 3,3,1 and end state will be 0,0,0
+class State:
+    #constructor to initialize c,m,d and p being root
+    def __init__(self, num_c, num_m, pos_b):
+        self.num_c = num_c
+        self.num_m = num_m
+        self.pos_b = pos_b
+        self.p = None
+    #member function to find if final state has been reached
+    def final(self):
+        return  self.pos_b == 0 and self.num_m == 0 and self.num_c == 0
+    #member function to check if current state is valid or not
+    def valid(self):
+        if self.num_m < 0 or self.num_c < 0 or self.num_m > 3 or self.num_c >3:
+            return False
+        elif self.num_c > self.num_m and self.num_m>0:
+            return False
+        elif self.num_c < self.num_m and self.num_m<3:
+            return False
+        else:
+            return True
 
-from collections import deque
+#Generate all possible successor states for given state and append if it's a valid state
+def successors(present_state):
+    nodes = []
+    C = [1,0,1,2,0]
+    M = [0,1,1,0,2]
+    for countC,countM in zip(C,M):
+        if present_state.pos_b == 0: #if boat is on right side of the bank
+            final_state = State(present_state.num_c + countC, present_state.num_m+countM, 1) #Transport 1C from R to L
+        else: #if boat is on left side of the bank
+            final_state = State(present_state.num_c - countC, present_state.num_m-countM, 0) #Transport 1C from L to R
+        insert_next_state(present_state, final_state, nodes)
+    return nodes
 
-# The state representation (x,y,z) signifies the number of missionaries, cannibals and boats on the left side of the river
+#function to insert all successors of final_state to nodes
+def insert_next_state(present_state,final_state, nodes):
+    if final_state.valid():
+        final_state.p = present_state
+        nodes.insert(len(nodes),final_state)
 
-class state(object):
-  def __init__(self, missionaries, cannibals, boats):
-    self.missionaries = missionaries
-    self.cannibals = cannibals
-    self.boats = boats
-  
-  # function to return generator for actions and new state
-  def successors(self):
-    if self.boats == 1:
-      flag = -1
-      direction = "from left to right"
+#breadth first search algorithm implementation
+def breadth_first_search():
+    s_state = State(3,3,1) #start state of missionaries and cannibals
+    head = []
+    seen = {}
+    head.insert(len(head),s_state) #head containing start state
+    while head:
+        tempresent_state = head.pop(0)
+        if tempresent_state.final(): #if state is final return the state
+            return tempresent_state
+        seen[tempresent_state] = 1
+        nodes = successors(tempresent_state)
+        for n in nodes:
+            if (n not in seen) or (n not in head):
+                head.insert(len(head),n)
+    return []
+
+mcd = []
+ans = breadth_first_search()
+mcd.insert(len(mcd),ans)
+temp = ans.p
+while temp: #construct states to reach goal state and store in mcd
+    mcd.insert(len(mcd),temp)
+    temp = temp.p
+print("MISSIONARIES AND CANNIBALS SOLUTION:")
+print("START STATE: 3\t3\t1")
+print("GOAL STATE:  0\t0\t0")
+print("INTERMEDIATE STATES:")
+for i in range(len(mcd)): #iterate through mcd
+    s = mcd[len(mcd) - i - 1]
+    if s.pos_b == 1: #assign place of boat using s.d value
+    	side = "left"
     else:
-      flag = 1
-      direction = "from right to left"
-    for missionaries in range(3):
-      for cannibals in range(3):
-        new_state = state(self.missionaries+ flag*missionaries, self.cannibals+ flag*cannibals, self.boats + flag*1);
-        if missionaries + cannibals >= 1 and missionaries + cannibals <= 2 and new_state.valid():
-          action = "transport %d missionaries and %d cannibals %s. Result state is %r" % ( missionaries, cannibals, direction, new_state)
-          yield action, new_state
-
-  # function to return if current state is a valid or invalid state
-  def valid(self):
-    if self.missionaries < 0 or self.cannibals < 0 or self.missionaries > 3 or self.cannibals > 3 or (self.boats != 0 and self.boats != 1):
-      return False   
-    # check if missionaries lesser than cannibals
-    if self.cannibals > self.missionaries and self.missionaries > 0:
-      return False
-    if self.cannibals < self.missionaries and self.missionaries < 3:
-      return False
-    return True
-
-  # function to return if current state is the goal state
-  def is_goal_state(self):
-    return self.cannibals == 0 and self.missionaries == 0 and self.boats == 0
-
-  def __repr__(self):
-    return "<(%d, %d, %d)>" % (self.missionaries, self.cannibals, self.boats)
-
-class Node(object):  
-  def __init__(self, parent_node,state,action,depth):
-    self.parent_node = parent_node
-    self.state = state
-    self.action = action
-    self.depth = depth
-
-  # function for expanding the successors of current node
-  def expand(self):
-    for (a,s) in self.state.successors():
-      s_node = Node(parent_node=self,state=s,action=a,depth=self.depth + 1)
-      yield s_node
-
-  # function to save the steps involved in reaching the goal state starting the initial state
-  def save(self):
-    steps = []
-    node = self
-    while node.parent_node is not None:
-      steps.append(node.action)
-      node = node.parent_node
-    steps.reverse() #reverse solution to give correct steps
-    return steps
-
-#Breadth First search function 
-def bfs(start_state):
-  start_node = Node(parent_node=None,state=start_state,action=None,depth=0)
-  FIFO = deque([start_node]) #using deque object from collections
-  max_depth = -1 #initialize depth to be -1
-  while 1:
-    node = FIFO.popleft() #pop left most element from the FIFO
-    if node.depth > max_depth:
-      max_depth = node.depth
-    if node.state.is_goal_state(): #if state is goal state save the steps to reach goal state
-      answer = node.save() #use saver function to append actions 
-      return answer
-    FIFO.extend(node.expand())
-
-def main():
-  start_state = state(3,3,1) #3 missionaries and 3 cannibals on the left side of the river with the boat on this side
-  answer = bfs(start_state) #call bfs to traverse state space to store solution path
-  for path in answer: #print path
-    print "%s" % path
-
-if __name__ == "__main__":
-  main()
+    	side = "right"
+    print(str(s.num_c) + " Cannibals and " + str(s.num_m) + " Missionaries on the left side of the bank and the boat on " + side + " side of the bank")
